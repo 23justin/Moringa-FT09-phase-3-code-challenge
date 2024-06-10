@@ -1,3 +1,4 @@
+
 from database.setup import create_tables
 from database.connection import get_db_connection
 from models.article import Article
