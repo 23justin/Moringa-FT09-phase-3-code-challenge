@@ -1,13 +1,16 @@
+# models/magazine.py
+
 from database.connection import get_db_connection
+from models.author import Author
 
 class Magazine:
     def __init__(self, id, name, category):
         if not isinstance(id, int):
             raise TypeError("id must be an integer")
-        if not isinstance(name, str) or len(name) < 2 or len(name) > 16:
-            raise ValueError("name must be a string between 2 and 16 characters")
-        if not isinstance(category, str) or len(category) == 0:
-            raise ValueError("category must be a non-empty string")
+        if not isinstance(name, str) or len(name) < 2:
+            raise ValueError("name must be a non-empty string with at least 2 characters")
+        if not isinstance(category, str) or len(category) < 2:
+            raise ValueError("category must be a non-empty string with at least 2 characters")
         self._id = id
         self._name = name
         self._category = category
@@ -28,7 +31,8 @@ class Magazine:
     def save(self):
         conn = get_db_connection()
         with conn:
-            conn.execute("INSERT OR REPLACE INTO magazines (id, name, category) VALUES (?, ?, ?)", (self._id, self._name, self._category))
+            conn.execute("INSERT OR REPLACE INTO magazines (id, name, category) VALUES (?, ?, ?)",
+                         (self._id, self._name, self._category))
 
     def delete(self):
         conn = get_db_connection()
@@ -45,24 +49,7 @@ class Magazine:
     def contributors(self):
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT DISTINCT authors.name FROM authors "
+        cur.execute("SELECT DISTINCT authors.id, authors.name FROM authors "
                     "JOIN articles ON authors.id = articles.author_id "
                     "WHERE articles.magazine_id = ?", (self._id,))
-        return [row["name"] for row in cur.fetchall()]
-
-    def article_titles(self):
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT title FROM articles WHERE magazine_id = ?", (self._id,))
-        titles = [row["title"] for row in cur.fetchall()]
-        return titles if titles else None
-
-    def contributing_authors(self):
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT authors.* FROM authors "
-                    "JOIN articles ON authors.id = articles.author_id "
-                    "WHERE articles.magazine_id = ? "
-                    "GROUP BY authors.id "
-                    "HAVING COUNT(articles.id) > 2", (self._id,))
-        return cur.fetchall()
+        return [Author(row["id"], row["name"]) for row in cur.fetchall()]
